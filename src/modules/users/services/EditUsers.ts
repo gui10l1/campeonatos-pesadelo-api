@@ -51,6 +51,14 @@ export default class EditUsers {
       dataToUpdate.password = updatedPass;
     }
 
+    if (data.email && data.email !== user.email) {
+      const emailInUse = await this.usersRepository.findByEmail(
+        data.email,
+      );
+
+      if (emailInUse) throw new ApiError('Este email está em uso por outra conta!');
+    }
+
     const updatedUser = await this.usersRepository.update(
       user,
       dataToUpdate,
