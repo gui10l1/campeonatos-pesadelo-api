@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import User from "../../../../users/database/typeorm/entities/User";
 import { Exclude, Expose } from "class-transformer";
+import TeamMember from "../../../../teamMembers/database/typeorm/entities/TeamMember";
 
 export enum Modality {
   FOT_FM = 1,
@@ -38,6 +39,9 @@ export default class Team {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'leader_id' })
   leader: User;
+
+  @OneToMany(() => TeamMember, member => member.team)
+  team_members: TeamMember[];
 
   @Expose({ name: 'photo_url' })
   getPhotoUrl(): string | null {
