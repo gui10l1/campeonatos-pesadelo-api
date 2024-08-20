@@ -38,7 +38,7 @@ export default class FindChampionshipsByIdService {
     const dateStart = Number(championship.date_start);
 
     const date = format(dateStart, 'yyyy-MM-dd');
-    const from = format(dateStart, 'HH:mm:ss');
+    const from = format(dateStart, 'HH:mm');
 
     const response: IResponse = {
       id,
@@ -59,7 +59,7 @@ export default class FindChampionshipsByIdService {
     if (championship.date_end) {
       const dateEnd = Number(championship.date_end);
 
-      response.to = format(dateEnd, 'HH:mm:ss');
+      response.to = format(dateEnd, 'HH:mm');
     }
 
     return response;
