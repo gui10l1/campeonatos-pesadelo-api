@@ -19,6 +19,7 @@ interface IResponse {
   description?: string;
   location_lat?: number;
   location_lng?: number;
+  modality_name: string;
 }
 
 @Service()
@@ -50,6 +51,7 @@ export default class FindChampionshipsByIdService {
       date,
       from,
       to: undefined,
+      modality_name: championship.getModalityName(),
     };
 
     if (championship.date_end) {
