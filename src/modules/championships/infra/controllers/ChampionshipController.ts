@@ -7,6 +7,7 @@ import CreateChampionshipsService from "../../services/Create";
 import ListChampionshipsService from "../../services/List";
 import FindChampionshipsByIdService from "../../services/FindById";
 import UpdateChampionshipsService from "../../services/Update";
+import DeleteChampionshipsByIdService from "../../services/Delete";
 
 export default class ChampionshipController {
   public async listOngoing(req: Request, res: Response): Promise<Response> {
@@ -63,6 +64,19 @@ export default class ChampionshipController {
     const service = Container.get(FindChampionshipsByIdService);
 
     const championship = await service.execute({ id });
+
+    const response = instanceToInstance(championship);
+
+    return res.json(response);
+  }
+
+  public async delete(req: Request, res: Response): Promise<Response> {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const service = Container.get(DeleteChampionshipsByIdService);
+
+    const championship = await service.execute({ id, userId });
 
     const response = instanceToInstance(championship);
 
