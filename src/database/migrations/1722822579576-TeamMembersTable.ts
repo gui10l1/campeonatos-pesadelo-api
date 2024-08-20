@@ -1,10 +1,12 @@
 import { MigrationInterface, QueryRunner, Table } from "typeorm";
 
-export default class TeamsTable1722786852277 implements MigrationInterface {
+export default class TeamMembersTable1722822579576
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.createTable(
       new Table({
-        name: "teams",
+        name: 'team_members',
         columns: [
           {
             name: "id",
@@ -20,17 +22,13 @@ export default class TeamsTable1722786852277 implements MigrationInterface {
             isNullable: false,
           },
           {
-            name: "description",
-            type: "text",
+            name: 'registration',
+            type: 'varchar',
+            length: '155',
             isNullable: true,
           },
           {
-            name: "modality",
-            type: "int",
-            isNullable: false,
-          },
-          {
-            name: "leader_id",
+            name: "team_id",
             type: "uuid",
             isNullable: false,
           },
@@ -47,19 +45,19 @@ export default class TeamsTable1722786852277 implements MigrationInterface {
         ],
         foreignKeys: [
           {
-            name: "LeaderId",
-            columnNames: ["leader_id"],
-            referencedColumnNames: ["id"],
-            referencedTableName: "users",
-            onDelete: "SET NULL",
-            onUpdate: "CASCADE",
-          },
-        ],
-      })
+            name: 'TeamId',
+            columnNames: ['team_id'],
+            referencedColumnNames: ['id'],
+            referencedTableName: 'teams',
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE',
+          }
+        ]
+      }),
     );
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropTable('teams');
+    await queryRunner.dropTable('team_members');
   }
 }

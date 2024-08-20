@@ -1,6 +1,7 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import User from "../../../../users/database/typeorm/entities/User";
-import { Exclude } from "class-transformer";
+import { Exclude, Expose } from "class-transformer";
+import TeamMember from "../../../../teamMembers/database/typeorm/entities/TeamMember";
 
 export enum Modality {
   FOT_FM = 1,
@@ -28,6 +29,9 @@ export default class Team {
   @Column('int', { nullable: false })
   modality: Modality;
 
+  @Column('varchar', { nullable: true })
+  photo?: string;
+
   @Exclude()
   @Column('uuid', { nullable: false })
   leader_id: string;
@@ -35,6 +39,20 @@ export default class Team {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'leader_id' })
   leader: User;
+
+  @OneToMany(() => TeamMember, member => member.team)
+  team_members: TeamMember[];
+
+  @Expose({ name: 'photo_url' })
+  getPhotoUrl(): string | null {
+    if (this.photo) {
+      const url = `${process.env.APP_URL}/uploads/${this.photo}`;
+
+      return url;
+    }
+
+    return null;
+  }
 
   @CreateDateColumn()
   created_at: string;
