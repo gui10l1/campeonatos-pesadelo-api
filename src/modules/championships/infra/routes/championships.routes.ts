@@ -34,4 +34,25 @@ championshipsRoutes.post(
   championshipsController.create,
 );
 
+championshipsRoutes.put(
+  '/:championshipId',
+  ensureUserAuth,
+  multer({ storage: uploadConfig.config.upload }).single('image'),
+  celebrate({
+    [Segments.BODY]: {
+      date: Joi.string().required().regex(/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/),
+      from: Joi.string().required().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+      name: Joi.string().required(),
+      modality: Joi.number().required(),
+      location: Joi.string().required(),
+      participants: Joi.number().required(),
+      to: Joi.string().regex(/^(?:[01]\d|2[0-3]):[0-5]\d$/),
+      description: Joi.string(),
+      locationLat: Joi.number(),
+      locationLng: Joi.number(),
+    },
+  }),
+  championshipsController.update,
+);
+
 export default championshipsRoutes;
