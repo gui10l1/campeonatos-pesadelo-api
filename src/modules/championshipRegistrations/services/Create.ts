@@ -71,7 +71,7 @@ export default class CreateChampionshipRegistrationsService {
 
     const registration = await this.championshipRegistrationRepository.create(data);
 
-    if (registrations.length === championship.participants) {
+    if ((registrations.length + 1) === championship.participants) {
       const games = championship.participants / 2;
       const randomizedRegistrations = shuffleArray(registrations);
 
