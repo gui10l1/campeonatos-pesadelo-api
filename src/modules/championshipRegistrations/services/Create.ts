@@ -60,10 +60,15 @@ export default class CreateChampionshipRegistrationsService {
       throw new ApiError('Seu time já foi inscrito nesse campeonato!');
     }
 
-    const registration = await this.championshipRegistrationRepository.create(data);
     const registrations = await this.championshipRegistrationRepository.listByChampionshipId(
       championship.id,
     );
+
+    if (registrations.length === championship.participants) {
+      throw new ApiError('As vagas para este campeonato se esgotaram!');
+    }
+
+    const registration = await this.championshipRegistrationRepository.create(data);
 
     if (registrations.length === championship.participants) {
       const games = championship.participants / 2;
