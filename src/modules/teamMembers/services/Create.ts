@@ -26,7 +26,11 @@ export default class CreateTeamMembers {
 
     if (!team) throw new ApiError('O time selecionado para esse membro não foi encontrado!');
 
-    if (team.leader_id !== data.userId) throw new ApiError('Apenas o líder pode prosseguir com essa ação!', 401);
+    const leaderIsCreatingNewTeamMember = team.leader_id === data.userId;
+
+    if (!leaderIsCreatingNewTeamMember) {
+      throw new ApiError('Apenas o líder pode prosseguir com essa ação!', 401);
+    }
 
     const member = await this.teamMembersRepository.create(data);
 

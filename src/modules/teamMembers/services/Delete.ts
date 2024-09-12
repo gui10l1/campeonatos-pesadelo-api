@@ -20,7 +20,11 @@ export default class DeleteTeamMember {
 
     if (!member) throw new ApiError('Membro não encontrado!');
 
-    if (member.team.leader_id !== userId) throw new ApiError('Apenas o líder pode prosseguir com essa ação!', 401);
+    const leaderIsCreatingNewTeamMember = member.team.leader_id === userId;
+
+    if (!leaderIsCreatingNewTeamMember) {
+      throw new ApiError('Apenas o líder pode prosseguir com essa ação!', 401);
+    }
 
     await this.teamMembersRepository.delete(member);
 
