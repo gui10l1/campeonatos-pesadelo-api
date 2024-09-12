@@ -9,34 +9,48 @@ import { IDiskProvider } from "../../../providers/DiskProvider/models/IDiskProvi
 @Service()
 export default class CreateTeams {
   constructor(
-    @Inject('typeorm.teamsRepository')
+    @Inject("typeorm.teamsRepository")
     private teamsRepository: ITeamsRepository,
 
-    @Inject('typeorm.usersRepository')
+    @Inject("typeorm.usersRepository")
     private usersRepository: IUsersRepository,
 
-    @Inject('diskProviders.disk')
-    private diskProvider: IDiskProvider,
+    @Inject("diskProviders.disk")
+    private diskProvider: IDiskProvider
   ) {}
 
+  private isModalityInvalid(modality: number): boolean {
+    const invalidModality = Object.entries(Modality).every(
+      ([, mod]) => mod !== modality
+    );
+
+    return invalidModality;
+  }
+
+  private async savePhotoToDisk(photo?: string): Promise<void> {
+    if (photo) {
+      await this.diskProvider.saveFiles([photo]);
+    }
+  }
+
   public async execute(data: ITeamsDTO): Promise<Team> {
-    const { leaderId, modality, photo } = data;
+    const { leaderId } = data;
 
     const leader = await this.usersRepository.findById(leaderId);
 
     if (!leader) {
-      throw new ApiError('Não foi possível localizar o líder do time na base de dados!');
+      throw new ApiError(
+        "Não foi possível localizar o líder do time na base de dados!"
+      );
     }
 
-    const invalidModality = Object
-      .entries(Modality)
-      .every(([, mod]) => mod !== modality);
+    const invalidModality = this.isModalityInvalid(data.modality);
 
     if (invalidModality) {
-      throw new ApiError('A modalidade escolhida é inválida!');
+      throw new ApiError("A modalidade escolhida é inválida!");
     }
 
-    if (photo) await this.diskProvider.saveFiles([photo]);
+    this.savePhotoToDisk(data.photo);
 
     const team = await this.teamsRepository.create(data);
 

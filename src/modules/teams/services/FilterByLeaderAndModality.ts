@@ -19,6 +19,10 @@ export default class FilterLeaderTeamsByModality {
     private usersRepository: IUsersRepository,
   ) {}
 
+  private filterTeamsByModality(teams: Team[], modality: number) {
+    return teams.filter(team => team.modality === modality);
+  }
+
   public async execute({ leaderId, modality }: IRequest): Promise<Team[]> {
     const leader = await this.usersRepository.findById(leaderId);
 
@@ -28,7 +32,7 @@ export default class FilterLeaderTeamsByModality {
 
     const teams = await this.teamsRepository.listByLeaderId(leader.id);
 
-    const filtered = teams.filter(team => team.modality === modality);
+    const filtered = this.filterTeamsByModality(teams, modality);
 
     return filtered;
   }

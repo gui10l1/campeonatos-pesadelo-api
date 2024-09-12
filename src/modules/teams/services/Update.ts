@@ -20,6 +20,14 @@ export default class UpdateTeams {
     private usersRepository: IUsersRepository,
   ) {}
 
+  private isModalityInvalid(modality: number): boolean {
+    const invalidModality = Object.entries(Modality).every(
+      ([, mod]) => mod !== modality
+    );
+
+    return invalidModality;
+  }
+
   public async execute(data: IRequest): Promise<Team> {
     const { loggedUser, teamId } = data;
 
@@ -44,9 +52,7 @@ export default class UpdateTeams {
     }
 
     if (data.modality) {
-      const invalidModality = Object
-        .entries(Modality)
-        .every(([, mod]) => data.modality !== mod);
+      const invalidModality = this.isModalityInvalid(data.modality);
 
       if (invalidModality) {
         throw new ApiError('A modalidade inserida é inválida!');
