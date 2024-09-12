@@ -3,55 +3,96 @@ import { IGamesDTO } from "../dtos";
 import Game from "../database/typeorm/entities/Game";
 import IGamesRepository from "../repositories/IGamesRepository";
 import IUsersRepository from "../../users/repositories/IUsersRepository";
-import { UserAccess } from "../../users/database/typeorm/entities/User";
+import User, { UserAccess } from "../../users/database/typeorm/entities/User";
 import ApiError from "../../../infra/errors/ApiError";
 
 type IRequest = {
   userId: string;
   gameId: string;
   homeScore?: number;
-  visitorScore?: number
-}
+  visitorScore?: number;
+};
 
 @Service()
 export default class UpdateGamesService {
   constructor(
-    @Inject('typeorm.usersRepository')
+    @Inject("typeorm.usersRepository")
     private usersRepository: IUsersRepository,
 
-    @Inject('typeorm.gamesRepository')
-    private gamesRepository: IGamesRepository,
+    @Inject("typeorm.gamesRepository")
+    private gamesRepository: IGamesRepository
   ) {}
 
-  public async execute(data: IRequest): Promise<Game> {
-    const user = await this.usersRepository.findById(data.userId);
+  private getHomeScore(oldScore: number, score?: number): number {
+    const homeScore = typeof score === "undefined" ? oldScore : score;
 
-    if (!user || user?.access !== UserAccess.ADMIN) {
-      throw new ApiError('Você não tem permissão para realizar esta operação!');
+    return homeScore;
+  }
+
+  private getVisitorScore(oldScore: number, score?: number): number {
+    const visitorScore = typeof score === "undefined" ? oldScore : score;
+
+    return visitorScore;
+  }
+
+  private getLoggedUser(userId: string): Promise<User | undefined> {
+    return this.usersRepository.findById(userId);
+  }
+
+  private loggedUserCanUpdateGames(user?: User): boolean {
+    if (!user) return false;
+
+    const userHasRightToAccess = user.access === UserAccess.ADMIN;
+
+    return userHasRightToAccess;
+  }
+
+  private isGameScoreDraw(leftScore: number, rightScore: number): boolean {
+    return leftScore === rightScore;
+  }
+
+  private async updateNextGame(
+    game: Game,
+    homeScore: number,
+    visitorScore: number
+  ): Promise<void> {
+    const draw = this.isGameScoreDraw(homeScore, visitorScore);
+    const oddGame = game.cardinal % 2 !== 0;
+    const winnerPlace = oddGame ? "home" : "visitor";
+
+    if (draw) {
+      await this.gamesRepository.update(game, { [winnerPlace]: null });
     }
 
-    const { gameId } = data;
+    const winner = homeScore > visitorScore ? game.home : game.visitor;
 
-    const game = await this.gamesRepository.findById(gameId);
+    await this.gamesRepository.update(game, { [winnerPlace]: winner });
+  }
+
+  public async execute(data: IRequest): Promise<Game> {
+    const user = await this.getLoggedUser(data.userId);
+    const userCanUpdateGames = this.loggedUserCanUpdateGames(user);
+
+    if (!userCanUpdateGames) {
+      throw new ApiError("Você não tem permissão para realizar esta operação!");
+    }
+
+    const game = await this.gamesRepository.findById(data.gameId);
 
     if (!game) {
-      throw new ApiError('Não foi possível atualizar esse registro!');
+      throw new ApiError("Não foi possível atualizar esse registro!");
     }
 
-    const homeScore = typeof data.homeScore === 'undefined' ? game.home_score : data.homeScore;
-    const visitorScore = typeof data.visitorScore === 'undefined' ? game.visitor_score : data.visitorScore;
+    const homeScore = this.getHomeScore(game.home_score, data.homeScore);
+    const visitorScore = this.getVisitorScore(
+      game.visitor_score,
+      data.visitorScore
+    );
+    const draw = this.isGameScoreDraw(homeScore, visitorScore);
 
-    const draw = homeScore === visitorScore;
     const nextGame = await this.gamesRepository.getNextGame(game);
 
-    const oddGame = game.cardinal % 2 !== 0;
-    const winnerPlace = oddGame ? 'home' : 'visitor';
-
-    if (draw && nextGame) {
-      await this.gamesRepository.update(nextGame, {
-        [winnerPlace]: null,
-      });
-    }
+    if (nextGame) this.updateNextGame(nextGame, homeScore, visitorScore);
 
     if (draw || !nextGame) {
       return this.gamesRepository.update(game, {
@@ -60,11 +101,6 @@ export default class UpdateGamesService {
       });
     }
 
-    const winner = homeScore > visitorScore ? game.home : game.visitor;
-
-    await this.gamesRepository.update(nextGame, {
-      [winnerPlace]: winner,
-    });
     await this.gamesRepository.update(game, data);
 
     const updatedGame = (await this.gamesRepository.findById(game.id)) as Game;
