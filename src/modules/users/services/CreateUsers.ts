@@ -18,29 +18,41 @@ export default class CreateUsers {
     private hashProvider: IHashProvider
   ) {}
 
-  public async execute(data: IRequest): Promise<User> {
-    const userData = { ...data };
-
+  private async checkEmailAvailability(email: string): Promise<boolean> {
     const emailAlreadyInUse = await this.usersRepository.findByEmail(
-      data.email
+      email
     );
 
-    if (emailAlreadyInUse) throw new ApiError("Este email está em uso!");
+    return !emailAlreadyInUse;
+  }
 
-    if (data.registration) {
-      const registrationAlreadyInUse =
-        await this.usersRepository.findByRegistration(data.registration);
+  private async checkRegistrationAvailability(registration?: string): Promise<boolean> {
+    if (!registration) return true;
 
-      if (registrationAlreadyInUse) {
-        throw new ApiError("Número de matrícula em uso por outra conta!");
-      }
+    const registrationAlreadyInUse = await this.usersRepository
+      .findByRegistration(registration);
+
+    return !registrationAlreadyInUse;
+  }
+
+  public async execute(data: IRequest): Promise<User> {
+    const emailAvailableToUse = await this.checkEmailAvailability(data.email);
+
+    if (!emailAvailableToUse) throw new ApiError("Este email está em uso!");
+
+    const registrationAvailableToUse = await this.checkRegistrationAvailability(
+      data.registration,
+    );
+
+    if (!registrationAvailableToUse) {
+      throw new ApiError('Esta matrícula já está em uso!');
     }
 
-    const hashedPassword = await this.hashProvider.hash(userData.password);
-
-    userData.password = hashedPassword;
-
-    const user = await this.usersRepository.create(userData);
+    const hashedPassword = await this.hashProvider.hash(data.password);
+    const user = await this.usersRepository.create({
+      ...data,
+      password: hashedPassword,
+    });
 
     return user;
   }

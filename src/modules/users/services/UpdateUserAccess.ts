@@ -16,22 +16,38 @@ export default class UpdateUserAccess {
     private usersRepository: IUsersRepository,
   ) {}
 
-  public async execute(data: IRequest): Promise<User> {
+  private validateRequestedAccess(requestedAccess: UserAccess): boolean {
     const validAccesses = [1, 2];
 
     const requestedAccessIsValid = validAccesses.some(
-      access => access === data.access
+      access => access === requestedAccess
     );
+
+    return requestedAccessIsValid;
+  }
+
+  private async getLoggedUser(userId: string): Promise<User | undefined> {
+    return this.usersRepository.findById(userId);
+  }
+
+  private checkLoggedUserAccess(access: UserAccess): boolean {
+    return access === UserAccess.ADMIN;
+  }
+
+  public async execute(data: IRequest): Promise<User> {
+    const requestedAccessIsValid = this.validateRequestedAccess(data.access);
 
     if (!requestedAccessIsValid) throw new ApiError('Invalid access!');
 
-    const loggedUser = await this.usersRepository.findById(
-      data.loggedUserId,
-    );
+    const loggedUser = await this.getLoggedUser(data.loggedUserId);
 
     if (!loggedUser) throw new ApiError('Could not found logged user!', 401);
 
-    if (loggedUser.access !== UserAccess.ADMIN) {
+    const loggedUserHasAccess = this.checkLoggedUserAccess(
+      loggedUser.access
+    );
+
+    if (!loggedUserHasAccess) {
       throw new ApiError('Action not authorized!');
     }
 

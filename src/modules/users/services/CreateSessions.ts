@@ -26,27 +26,47 @@ export default class CreateSessions {
     private hashProvider: IHashProvider,
   ) {}
 
-  public async execute(data: IRequest): Promise<IResponse> {
-    const { email, password } = data;
-
-    const user = await this.usersRepository.findByEmail(email);
-
-    if (!user) throw new ApiError('Email ou senha incorreto(s)');
-
+  private async checkPasswordMatch(
+    givenPassword: string,
+    userPassword: string
+  ): Promise<boolean> {
     const passwordCheck = await this.hashProvider.check(
-      user.password,
-      password,
+      userPassword,
+      givenPassword,
     );
 
-    if (!passwordCheck) throw new ApiError('Email ou senha incorreto(s)');
+    return passwordCheck;
+  }
 
-    const tokenPayload = { userId: user.id };
+  private async generateSessionToken(userId: string): Promise<string> {
+    const tokenPayload = { userId };
 
     const token = sign(tokenPayload, jwtConfig.secret, {
       expiresIn: jwtConfig.exp,
     });
 
-    this.usersRepository.update(user, { lastActive: Date.now() });
+    return token;
+  }
+
+  private async updateUserLastActive(user: User): Promise<void> {
+    await this.usersRepository.update(user, { lastActive: Date.now() });
+  }
+
+  public async execute(data: IRequest): Promise<IResponse> {
+    const user = await this.usersRepository.findByEmail(data.email);
+
+    if (!user) throw new ApiError('Email ou senha incorreto(s)');
+
+    const passwordMatch = await this.checkPasswordMatch(
+      data.password,
+      user.password,
+    );
+
+    if (!passwordMatch) throw new ApiError('Email ou senha incorreto(s)');
+
+    const token = await this.generateSessionToken(user.id);
+
+    this.updateUserLastActive(user);
 
     return { token, user };
   }

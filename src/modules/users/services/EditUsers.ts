@@ -24,49 +24,75 @@ export default class EditUsers {
     private hashProvider: IHashProvider,
   ) {}
 
-  public async execute({ data, userId }: IRequest): Promise<User> {
-    const user = await this.usersRepository.findById(
-      userId,
+  private async getUserToUpdate(userId: string): Promise<User | undefined> {
+    return this.usersRepository.findById(userId);
+  }
+
+  private async checkOldPassword(
+    currentPassword: string,
+    oldPassword: string
+  ): Promise<boolean> {
+    return this.hashProvider.check(currentPassword, oldPassword);
+  }
+
+  private async hashNewPassword(password: string): Promise<string> {
+    return this.hashProvider.hash(password.trim());
+  }
+
+  private async checkEmailAvailability(email: string): Promise<boolean> {
+    const emailInUse = await this.usersRepository.findByEmail(email.trim());
+
+    return !emailInUse;
+  }
+
+  private async checkRegistrationAvailability(
+    registration: string
+  ): Promise<boolean> {
+    const registrationInUse = await this.usersRepository.findByRegistration(
+      registration.trim()
     );
 
-    if (!user) throw new ApiError('Não foi possível encontrar o usuário para editar!');
+    return !registrationInUse;
+  }
+
+  public async execute({ data, userId }: IRequest): Promise<User> {
+    const user = await this.getUserToUpdate(userId);
+
+    if (!user) {
+      throw new ApiError('Não foi possível encontrar o usuário para editar!');
+    }
 
     const dataToUpdate = { ...data };
 
-    if (data.password) {
-      if (!data.oldPassword)
-        throw new ApiError('Para atualizar sua senha, forneça a sua senha atual!');
-
-      const passwordValidation = await this.hashProvider.check(
+    if (data.password && data.oldPassword) {
+      const passwordMatches = await this.checkOldPassword(
         user.password,
-        data.oldPassword
+        data.oldPassword,
       );
 
-      if (!passwordValidation) throw new ApiError('A senha atual está incorreta!');
+      if (!passwordMatches) {
+        throw new ApiError('A senha atual está incorreta!');
+      }
 
-      const updatedPass = await this.hashProvider.hash(
-        data.password.trim(),
-      );
+      const updatedPass = await this.hashNewPassword(data.password);
 
       dataToUpdate.password = updatedPass;
     }
 
     if (data.email && data.email.trim() !== user.email.trim()) {
-      const emailInUse = await this.usersRepository.findByEmail(
-        data.email,
-      );
+      const emailIsAvailable = await this.checkEmailAvailability(data.email);
 
-      if (emailInUse) {
+      if (!emailIsAvailable) {
         throw new ApiError('Este email está em uso por outra conta!');
       }
     }
 
     if (data.registration && data.registration.trim() !== user.registration?.trim()) {
-      const registrationInUse = await this.usersRepository.findByEmail(
-        data.registration,
+      const registrationIsAvailable = await this.checkRegistrationAvailability(
+        data.registration
       );
 
-      if (registrationInUse) {
+      if (!registrationIsAvailable) {
         throw new ApiError('A matrícula fornecida está em uso por outra conta!');
       }
     }
